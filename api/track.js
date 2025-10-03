@@ -5,6 +5,10 @@
 const store = require('../src/lib/store');
 const { parseUA } = require('../src/lib/ua');
 
+export const config = {
+  runtime: 'nodejs18.x',
+};
+
 // Rate limiting para tracking
 async function checkTrackingRateLimit(ip, sid) {
   const now = Date.now();

@@ -1,33 +1,4 @@
 {
-  "functions": {
-    "api/redirect.js": {
-      "runtime": "edge"
-    },
-    "api/track.js": {
-      "runtime": "nodejs18.x"
-    },
-    "api/session.js": {
-      "runtime": "nodejs18.x"
-    },
-    "api/links/index.js": {
-      "runtime": "nodejs18.x"
-    },
-    "api/links/[slug].js": {
-      "runtime": "nodejs18.x"
-    },
-    "api/links/[slug]/stats.js": {
-      "runtime": "nodejs18.x"
-    },
-    "api/admin/login.js": {
-      "runtime": "nodejs18.x"
-    },
-    "api/admin/links.js": {
-      "runtime": "nodejs18.x"
-    },
-    "api/q/[slug].svg.js": {
-      "runtime": "nodejs18.x"
-    }
-  },
   "routes": [
     {
       "src": "^/api/links$",
