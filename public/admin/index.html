@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración - Acortador de URLs</title>
+    <link rel="stylesheet" href="../styles.css">
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔐 Panel de Administración</h1>
+            <p>Gestiona todos los enlaces acortados</p>
+        </header>
+
+        <main>
+            <!-- Login Form -->
+            <section id="loginSection" class="login-section">
+                <div class="login-form">
+                    <h3>Iniciar Sesión</h3>
+                    <form id="loginForm">
+                        <div class="form-group">
+                            <label for="adminToken">Token de Administrador:</label>
+                            <input type="password" id="adminToken" name="adminToken" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Verificación de Seguridad:</label>
+                            <div class="cf-turnstile" data-sitekey="0x4AAAAAAABkMYinukE8nz0"></div>
+                        </div>
+                        
+                        <button type="submit" id="loginBtn">Iniciar Sesión</button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Admin Panel -->
+            <section id="adminPanel" class="admin-panel" style="display: none;">
+                <div class="admin-header">
+                    <h3>Gestión de Enlaces</h3>
+                    <div class="admin-actions">
+                        <button onclick="refreshLinks()" class="btn">Actualizar</button>
+                        <button onclick="logout()" class="btn danger">Cerrar Sesión</button>
+                    </div>
+                </div>
+
+                <!-- Filtros y búsqueda -->
+                <div class="filters">
+                    <input type="text" id="searchInput" placeholder="Buscar por slug o URL..." onkeyup="filterLinks()">
+                    <select id="statusFilter" onchange="filterLinks()">
+                        <option value="">Todos los estados</option>
+                        <option value="enabled">Habilitados</option>
+                        <option value="disabled">Deshabilitados</option>
+                    </select>
+                </div>
+
+                <!-- Tabla de enlaces -->
+                <div class="links-table-container">
+                    <table class="links-table">
+                        <thead>
+                            <tr>
+                                <th>Slug</th>
+                                <th>URL</th>
+                                <th>Estado</th>
+                                <th>Clicks</th>
+                                <th>Creado</th>
+                                <th>Propietario</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="linksTableBody">
+                            <tr>
+                                <td colspan="7" class="loading">Cargando enlaces...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Paginación -->
+                <div class="pagination">
+                    <button id="prevBtn" onclick="loadPreviousPage()" disabled>Anterior</button>
+                    <span id="pageInfo">Página 1</span>
+                    <button id="nextBtn" onclick="loadNextPage()" disabled>Siguiente</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal de edición -->
+    <div id="editModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Editar Enlace</h3>
+                <button onclick="closeEditModal()" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="editForm">
+                    <div class="form-group">
+                        <label for="editUrl">URL:</label>
+                        <input type="url" id="editUrl" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editSlug">Nuevo Slug:</label>
+                        <input type="text" id="editSlug" pattern="[a-zA-Z0-9-_]+">
+                    </div>
+                    <div class="form-group">
+                        <label for="editEnabled">Estado:</label>
+                        <select id="editEnabled">
+                            <option value="true">Habilitado</option>
+                            <option value="false">Deshabilitado</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="editTtl">TTL (segundos):</label>
+                        <input type="number" id="editTtl" min="1">
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn">Guardar</button>
+                        <button type="button" onclick="closeEditModal()" class="btn secondary">Cancelar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de estadísticas -->
+    <div id="statsModal" class="modal" style="display: none;">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h3>Estadísticas Detalladas</h3>
+                <button onclick="closeStatsModal()" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="statsContent">
+                    <!-- Contenido de estadísticas se carga aquí -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Estado global
+        let currentCursor = '0';
+        let hasMore = false;
+        let allLinks = [];
+        let filteredLinks = [];
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAdminStatus();
+        });
+
+        // Verificar estado de admin
+        function checkAdminStatus() {
+            const isAdmin = document.cookie.includes('admin=1');
+            if (isAdmin) {
+                showAdminPanel();
+                loadLinks();
+            } else {
+                showLoginForm();
+            }
+        }
+
+        // Mostrar formulario de login
+        function showLoginForm() {
+            document.getElementById('loginSection').style.display = 'block';
+            document.getElementById('adminPanel').style.display = 'none';
+        }
+
+        // Mostrar panel de admin
+        function showAdminPanel() {
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('adminPanel').style.display = 'block';
+        }
+
+        // Manejar login
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const adminToken = formData.get('adminToken');
+            const turnstileToken = document.querySelector('[name="cf-turnstile-response"]').value;
+            
+            if (!turnstileToken) {
+                alert('Por favor completa la verificación de seguridad');
+                return;
+            }
+
+            try {
+                const loginBtn = document.getElementById('loginBtn');
+                loginBtn.disabled = true;
+                loginBtn.textContent = 'Iniciando sesión...';
+
+                const response = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        token: adminToken,
+                        turnstileToken: turnstileToken
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showAdminPanel();
+                    loadLinks();
+                } else {
+                    alert(`Error: ${result.error}`);
+                }
+            } catch (error) {
+                console.error('Error en login:', error);
+                alert('Error al iniciar sesión');
+            } finally {
+                const loginBtn = document.getElementById('loginBtn');
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Iniciar Sesión';
+            }
+        });
+
+        // Cargar enlaces
+        async function loadLinks(cursor = '0') {
+            try {
+                const response = await fetch(`/api/admin/links?cursor=${cursor}&limit=50`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    allLinks = data.links;
+                    filteredLinks = [...allLinks];
+                    currentCursor = cursor;
+                    hasMore = data.hasMore;
+                    
+                    updateLinksTable();
+                    updatePagination();
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (error) {
+                console.error('Error cargando enlaces:', error);
+                alert('Error al cargar enlaces');
+            }
+        }
+
+        // Actualizar tabla de enlaces
+        function updateLinksTable() {
+            const tbody = document.getElementById('linksTableBody');
+            
+            if (filteredLinks.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="no-data">No se encontraron enlaces</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filteredLinks.map(link => `
+                <tr>
+                    <td><code>/${link.slug}</code></td>
+                    <td class="url-cell">
+                        <a href="${link.url}" target="_blank" title="${link.url}">
+                            ${link.url.length > 50 ? link.url.substring(0, 50) + '...' : link.url}
+                        </a>
+                    </td>
+                    <td>
+                        <span class="status ${link.enabled ? 'enabled' : 'disabled'}">
+                            ${link.enabled ? 'Habilitado' : 'Deshabilitado'}
+                        </span>
+                    </td>
+                    <td>${link.totalClicks}</td>
+                    <td>${new Date(link.createdAt).toLocaleDateString()}</td>
+                    <td><code>${link.ownerSid.substring(0, 8)}...</code></td>
+                    <td class="actions">
+                        <button onclick="editLink('${link.slug}')" class="btn-small">Editar</button>
+                        <button onclick="viewStats('${link.slug}')" class="btn-small">Stats</button>
+                        <button onclick="deleteLink('${link.slug}')" class="btn-small danger">Eliminar</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Filtrar enlaces
+        function filterLinks() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const statusFilter = document.getElementById('statusFilter').value;
+            
+            filteredLinks = allLinks.filter(link => {
+                const matchesSearch = link.slug.toLowerCase().includes(searchTerm) || 
+                                    link.url.toLowerCase().includes(searchTerm);
+                const matchesStatus = !statusFilter || 
+                                   (statusFilter === 'enabled' && link.enabled) ||
+                                   (statusFilter === 'disabled' && !link.enabled);
+                
+                return matchesSearch && matchesStatus;
+            });
+            
+            updateLinksTable();
+        }
+
+        // Actualizar paginación
+        function updatePagination() {
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const pageInfo = document.getElementById('pageInfo');
+            
+            prevBtn.disabled = currentCursor === '0';
+            nextBtn.disabled = !hasMore;
+            
+            const page = Math.floor(parseInt(currentCursor) / 50) + 1;
+            pageInfo.textContent = `Página ${page}`;
+        }
+
+        // Cargar página anterior
+        function loadPreviousPage() {
+            const newCursor = Math.max(0, parseInt(currentCursor) - 50).toString();
+            loadLinks(newCursor);
+        }
+
+        // Cargar página siguiente
+        function loadNextPage() {
+            if (hasMore) {
+                const newCursor = (parseInt(currentCursor) + 50).toString();
+                loadLinks(newCursor);
+            }
+        }
+
+        // Actualizar enlaces
+        function refreshLinks() {
+            loadLinks(currentCursor);
+        }
+
+        // Editar enlace
+        function editLink(slug) {
+            const link = allLinks.find(l => l.slug === slug);
+            if (!link) return;
+
+            document.getElementById('editUrl').value = link.url;
+            document.getElementById('editSlug').value = link.slug;
+            document.getElementById('editEnabled').value = link.enabled.toString();
+            document.getElementById('editTtl').value = link.ttl || '';
+            
+            document.getElementById('editModal').style.display = 'block';
+            
+            // Guardar slug original para referencia
+            document.getElementById('editForm').dataset.originalSlug = slug;
+        }
+
+        // Cerrar modal de edición
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+
+        // Manejar envío de edición
+        document.getElementById('editForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const originalSlug = e.target.dataset.originalSlug;
+            const formData = new FormData(e.target);
+            
+            const data = {
+                url: formData.get('editUrl'),
+                newSlug: formData.get('editSlug') || undefined,
+                enabled: formData.get('editEnabled') === 'true',
+                ttl: formData.get('editTtl') ? parseInt(formData.get('editTtl')) : undefined
+            };
+
+            try {
+                const response = await fetch(`/api/links/${originalSlug}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    alert('Enlace actualizado exitosamente');
+                    closeEditModal();
+                    loadLinks(currentCursor);
+                } else {
+                    alert(`Error: ${result.error}`);
+                }
+            } catch (error) {
+                console.error('Error editando enlace:', error);
+                alert('Error al editar enlace');
+            }
+        });
+
+        // Ver estadísticas
+        async function viewStats(slug) {
+            try {
+                const response = await fetch(`/api/links/${slug}/stats`);
+                const stats = await response.json();
+                
+                if (response.ok) {
+                    showStatsModal(stats);
+                } else {
+                    alert(`Error: ${stats.error}`);
+                }
+            } catch (error) {
+                console.error('Error obteniendo estadísticas:', error);
+                alert('Error al obtener estadísticas');
+            }
+        }
+
+        // Mostrar modal de estadísticas
+        function showStatsModal(stats) {
+            const statsContent = document.getElementById('statsContent');
+            statsContent.innerHTML = `
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h4>Total de Clicks</h4>
+                        <div class="stat-value">${stats.totalClicks}</div>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Últimos 14 días</h4>
+                        <div class="chart-container">
+                            <canvas id="clicksChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Top Países</h4>
+                        <ul class="stat-list">
+                            ${stats.topGeo.map(item => `<li>${item.location}: ${item.clicks}</li>`).join('')}
+                        </ul>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Top Referrers</h4>
+                        <ul class="stat-list">
+                            ${stats.topReferrers.map(item => `<li>${item.referrer}: ${item.clicks}</li>`).join('')}
+                        </ul>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Dispositivos</h4>
+                        <ul class="stat-list">
+                            ${stats.devices.map(item => `<li>${item.device}: ${item.clicks}</li>`).join('')}
+                        </ul>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Navegadores</h4>
+                        <ul class="stat-list">
+                            ${stats.browsers.map(item => `<li>${item.browser}: ${item.clicks}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('statsModal').style.display = 'block';
+            
+            // Crear gráfico
+            setTimeout(() => {
+                const canvas = document.getElementById('clicksChart');
+                if (canvas) {
+                    drawSimpleChart(canvas, stats.byDay);
+                }
+            }, 100);
+        }
+
+        // Cerrar modal de estadísticas
+        function closeStatsModal() {
+            document.getElementById('statsModal').style.display = 'none';
+        }
+
+        // Dibujar gráfico simple
+        function drawSimpleChart(canvas, data) {
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            ctx.clearRect(0, 0, width, height);
+            
+            const maxClicks = Math.max(...data.map(d => d.clicks));
+            const barWidth = width / data.length;
+            
+            data.forEach((item, index) => {
+                const barHeight = (item.clicks / maxClicks) * height;
+                const x = index * barWidth;
+                const y = height - barHeight;
+                
+                ctx.fillStyle = '#007bff';
+                ctx.fillRect(x, y, barWidth - 2, barHeight);
+            });
+        }
+
+        // Eliminar enlace
+        async function deleteLink(slug) {
+            if (!confirm('¿Estás seguro de que quieres eliminar este enlace? Esta acción no se puede deshacer.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/links/${slug}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    alert('Enlace eliminado exitosamente');
+                    loadLinks(currentCursor);
+                } else {
+                    alert(`Error: ${result.error}`);
+                }
+            } catch (error) {
+                console.error('Error eliminando enlace:', error);
+                alert('Error al eliminar enlace');
+            }
+        }
+
+        // Cerrar sesión
+        function logout() {
+            document.cookie = 'admin=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+            showLoginForm();
+        }
+
+        // Cerrar modales al hacer clic fuera
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal')) {
+                closeEditModal();
+                closeStatsModal();
+            }
+        });
+    </script>
+</body>
+</html>

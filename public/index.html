@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acortador de URLs</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔗 Acortador de URLs</h1>
+            <p>Acorta tus enlaces de forma rápida y segura</p>
+        </header>
+
+        <main>
+            <!-- Formulario de acortamiento -->
+            <section class="shortener-form">
+                <form id="shortenerForm">
+                    <div class="form-group">
+                        <label for="url">URL a acortar:</label>
+                        <input type="url" id="url" name="url" placeholder="https://ejemplo.com" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="slug">Slug personalizado (opcional):</label>
+                        <input type="text" id="slug" name="slug" placeholder="mi-slug-personalizado" pattern="[a-zA-Z0-9-_]+">
+                        <small>Solo letras, números, guiones y guiones bajos</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="ttl">TTL en segundos (opcional):</label>
+                        <input type="number" id="ttl" name="ttl" placeholder="3600" min="1">
+                        <small>Tiempo de vida del enlace en segundos</small>
+                    </div>
+                    
+                    <button type="submit" id="submitBtn">Acortar URL</button>
+                </form>
+            </section>
+
+            <!-- Resultado -->
+            <section class="result" id="result" style="display: none;">
+                <h3>✅ ¡URL acortada exitosamente!</h3>
+                <div class="result-content">
+                    <div class="url-display">
+                        <input type="text" id="shortUrl" readonly>
+                        <button id="copyBtn" onclick="copyToClipboard()">Copiar</button>
+                    </div>
+                    <div class="qr-section">
+                        <img id="qrCode" alt="Código QR">
+                        <p>Escanea el código QR para acceder al enlace</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Historial local -->
+            <section class="history">
+                <h3>📋 Tu Historial</h3>
+                <div id="historyList" class="history-list">
+                    <p class="empty-history">No tienes enlaces acortados aún</p>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>
+                <a href="/admin">Panel de Administración</a> | 
+                <a href="#" onclick="clearHistory()">Limpiar Historial</a>
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        // Estado global
+        let currentSession = null;
+
+        // Inicializar sesión al cargar
+        document.addEventListener('DOMContentLoaded', async () => {
+            await initializeSession();
+            loadHistory();
+        });
+
+        // Inicializar sesión
+        async function initializeSession() {
+            try {
+                const response = await fetch('/api/session');
+                const data = await response.json();
+                if (data.ok) {
+                    currentSession = data.sid;
+                }
+            } catch (error) {
+                console.error('Error inicializando sesión:', error);
+            }
+        }
+
+        // Manejar envío del formulario
+        document.getElementById('shortenerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const data = {
+                url: formData.get('url'),
+                slug: formData.get('slug') || undefined,
+                ttl: formData.get('ttl') ? parseInt(formData.get('ttl')) : undefined
+            };
+
+            try {
+                const submitBtn = document.getElementById('submitBtn');
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Acortando...';
+
+                const response = await fetch('/api/links', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showResult(result);
+                    addToHistory(result);
+                } else {
+                    alert(`Error: ${result.error}`);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al acortar la URL');
+            } finally {
+                const submitBtn = document.getElementById('submitBtn');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Acortar URL';
+            }
+        });
+
+        // Mostrar resultado
+        function showResult(result) {
+            const resultSection = document.getElementById('result');
+            const shortUrlInput = document.getElementById('shortUrl');
+            const qrCodeImg = document.getElementById('qrCode');
+            
+            shortUrlInput.value = `https://${window.location.host}/${result.slug}`;
+            qrCodeImg.src = `/api/q/${result.slug}.svg`;
+            
+            resultSection.style.display = 'block';
+            resultSection.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Copiar al portapapeles
+        function copyToClipboard() {
+            const shortUrlInput = document.getElementById('shortUrl');
+            shortUrlInput.select();
+            document.execCommand('copy');
+            
+            const copyBtn = document.getElementById('copyBtn');
+            const originalText = copyBtn.textContent;
+            copyBtn.textContent = '¡Copiado!';
+            setTimeout(() => {
+                copyBtn.textContent = originalText;
+            }, 2000);
+        }
+
+        // Agregar al historial local
+        function addToHistory(linkData) {
+            const history = getHistory();
+            const newLink = {
+                ...linkData,
+                createdAt: Date.now(),
+                totalClicks: 0
+            };
+            
+            history.unshift(newLink);
+            localStorage.setItem('shortener:history', JSON.stringify(history));
+            loadHistory();
+        }
+
+        // Obtener historial local
+        function getHistory() {
+            const stored = localStorage.getItem('shortener:history');
+            return stored ? JSON.parse(stored) : [];
+        }
+
+        // Cargar historial
+        function loadHistory() {
+            const history = getHistory();
+            const historyList = document.getElementById('historyList');
+            
+            if (history.length === 0) {
+                historyList.innerHTML = '<p class="empty-history">No tienes enlaces acortados aún</p>';
+                return;
+            }
+
+            historyList.innerHTML = history.map(link => `
+                <div class="history-item">
+                    <div class="link-info">
+                        <div class="original-url">${link.url}</div>
+                        <div class="short-url">https://${window.location.host}/${link.slug}</div>
+                        <div class="link-meta">
+                            Creado: ${new Date(link.createdAt).toLocaleString()}
+                            ${link.totalClicks > 0 ? ` | Clicks: ${link.totalClicks}` : ''}
+                        </div>
+                    </div>
+                    <div class="link-actions">
+                        <button onclick="copyLink('${link.slug}')" class="btn-small">Copiar</button>
+                        <button onclick="viewStats('${link.slug}')" class="btn-small">Estadísticas</button>
+                        <button onclick="editLink('${link.slug}')" class="btn-small">Editar</button>
+                        <button onclick="deleteLink('${link.slug}')" class="btn-small danger">Eliminar</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Copiar enlace
+        function copyLink(slug) {
+            const url = `https://${window.location.host}/${slug}`;
+            navigator.clipboard.writeText(url).then(() => {
+                alert('Enlace copiado al portapapeles');
+            });
+        }
+
+        // Ver estadísticas
+        async function viewStats(slug) {
+            try {
+                const response = await fetch(`/api/links/${slug}/stats`);
+                const stats = await response.json();
+                
+                if (response.ok) {
+                    showStatsModal(stats);
+                } else {
+                    alert(`Error: ${stats.error}`);
+                }
+            } catch (error) {
+                console.error('Error obteniendo estadísticas:', error);
+                alert('Error al obtener estadísticas');
+            }
+        }
+
+        // Mostrar modal de estadísticas
+        function showStatsModal(stats) {
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Estadísticas de /${stats.slug}</h3>
+                        <button onclick="closeModal()" class="close-btn">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <h4>Total de Clicks</h4>
+                                <div class="stat-value">${stats.totalClicks}</div>
+                            </div>
+                            <div class="stat-card">
+                                <h4>Últimos 14 días</h4>
+                                <div class="chart-container">
+                                    <canvas id="clicksChart" width="400" height="200"></canvas>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <h4>Top Países</h4>
+                                <ul class="stat-list">
+                                    ${stats.topGeo.map(item => `<li>${item.location}: ${item.clicks}</li>`).join('')}
+                                </ul>
+                            </div>
+                            <div class="stat-card">
+                                <h4>Top Referrers</h4>
+                                <ul class="stat-list">
+                                    ${stats.topReferrers.map(item => `<li>${item.referrer}: ${item.clicks}</li>`).join('')}
+                                </ul>
+                            </div>
+                            <div class="stat-card">
+                                <h4>Dispositivos</h4>
+                                <ul class="stat-list">
+                                    ${stats.devices.map(item => `<li>${item.device}: ${item.clicks}</li>`).join('')}
+                                </ul>
+                            </div>
+                            <div class="stat-card">
+                                <h4>Navegadores</h4>
+                                <ul class="stat-list">
+                                    ${stats.browsers.map(item => `<li>${item.browser}: ${item.clicks}</li>`).join('')}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Crear gráfico simple
+            setTimeout(() => {
+                const canvas = document.getElementById('clicksChart');
+                if (canvas) {
+                    drawSimpleChart(canvas, stats.byDay);
+                }
+            }, 100);
+        }
+
+        // Dibujar gráfico simple
+        function drawSimpleChart(canvas, data) {
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            ctx.clearRect(0, 0, width, height);
+            
+            const maxClicks = Math.max(...data.map(d => d.clicks));
+            const barWidth = width / data.length;
+            
+            data.forEach((item, index) => {
+                const barHeight = (item.clicks / maxClicks) * height;
+                const x = index * barWidth;
+                const y = height - barHeight;
+                
+                ctx.fillStyle = '#007bff';
+                ctx.fillRect(x, y, barWidth - 2, barHeight);
+            });
+        }
+
+        // Cerrar modal
+        function closeModal() {
+            const modal = document.querySelector('.modal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        // Editar enlace
+        async function editLink(slug) {
+            const newUrl = prompt('Nueva URL:');
+            if (!newUrl) return;
+            
+            try {
+                const response = await fetch(`/api/links/${slug}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ url: newUrl })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert('Enlace actualizado exitosamente');
+                    loadHistory();
+                } else {
+                    alert(`Error: ${result.error}`);
+                }
+            } catch (error) {
+                console.error('Error editando enlace:', error);
+                alert('Error al editar enlace');
+            }
+        }
+
+        // Eliminar enlace
+        async function deleteLink(slug) {
+            if (!confirm('¿Estás seguro de que quieres eliminar este enlace?')) return;
+            
+            try {
+                const response = await fetch(`/api/links/${slug}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert('Enlace eliminado exitosamente');
+                    removeFromHistory(slug);
+                    loadHistory();
+                } else {
+                    alert(`Error: ${result.error}`);
+                }
+            } catch (error) {
+                console.error('Error eliminando enlace:', error);
+                alert('Error al eliminar enlace');
+            }
+        }
+
+        // Remover del historial local
+        function removeFromHistory(slug) {
+            const history = getHistory();
+            const filtered = history.filter(link => link.slug !== slug);
+            localStorage.setItem('shortener:history', JSON.stringify(filtered));
+        }
+
+        // Limpiar historial
+        function clearHistory() {
+            if (confirm('¿Estás seguro de que quieres limpiar todo el historial?')) {
+                localStorage.removeItem('shortener:history');
+                loadHistory();
+            }
+        }
+
+        // Cerrar modal al hacer clic fuera
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal')) {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>

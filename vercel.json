@@ -1,0 +1,69 @@
+{
+  "functions": {
+    "api/redirect.js": {
+      "runtime": "edge"
+    },
+    "api/track.js": {
+      "runtime": "nodejs18.x"
+    },
+    "api/session.js": {
+      "runtime": "nodejs18.x"
+    },
+    "api/links/index.js": {
+      "runtime": "nodejs18.x"
+    },
+    "api/links/[slug].js": {
+      "runtime": "nodejs18.x"
+    },
+    "api/links/[slug]/stats.js": {
+      "runtime": "nodejs18.x"
+    },
+    "api/admin/login.js": {
+      "runtime": "nodejs18.x"
+    },
+    "api/admin/links.js": {
+      "runtime": "nodejs18.x"
+    },
+    "api/q/[slug].svg.js": {
+      "runtime": "nodejs18.x"
+    }
+  },
+  "routes": [
+    {
+      "src": "^/api/links$",
+      "dest": "/api/links/index"
+    },
+    {
+      "src": "^/api/links/([^/]+)/stats$",
+      "dest": "/api/links/[slug]/stats"
+    },
+    {
+      "src": "^/api/links/([^/]+)$",
+      "dest": "/api/links/[slug]"
+    },
+    {
+      "src": "^/api/(session|track|admin/login|admin/links)$",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "^/api/q/([^/]+)\\.svg$",
+      "dest": "/api/q/[slug].svg"
+    },
+    {
+      "src": "^/$",
+      "dest": "/public/index.html"
+    },
+    {
+      "src": "^/admin$",
+      "dest": "/public/admin/index.html"
+    },
+    {
+      "src": "^/(favicon\\.ico|robots\\.txt|sitemap\\.xml|.*\\.(css|js|png|jpg|svg|webp|avif))$",
+      "dest": "/public/$1"
+    },
+    {
+      "src": "^/(.*)$",
+      "dest": "/api/redirect?slug=$1"
+    }
+  ]
+}
