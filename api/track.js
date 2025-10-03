@@ -6,7 +6,7 @@ const store = require('../src/lib/store');
 const { parseUA } = require('../src/lib/ua');
 
 export const config = {
-  runtime: 'nodejs18.x',
+  runtime: 'nodejs',
 };
 
 // Rate limiting para tracking

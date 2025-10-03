@@ -6,7 +6,7 @@ const { nanoid } = require('nanoid');
 const store = require('../../src/lib/store');
 
 export const config = {
-  runtime: 'nodejs18.x',
+  runtime: 'nodejs',
 };
 
 // Validar URL
