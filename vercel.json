@@ -5,10 +5,6 @@
       "dest": "/api/working-links"
     },
     {
-      "src": "^/api/links/([^/]+)/stats$",
-      "dest": "/api/link-stats"
-    },
-    {
       "src": "^/api/links/([^/]+)$",
       "dest": "/api/link-edit"
     },
@@ -21,10 +17,6 @@
       "dest": "/api/link-edit"
     },
     {
-      "src": "^/api/link-stats$",
-      "dest": "/api/link-stats"
-    },
-    {
       "src": "^/api/session$",
       "dest": "/api/working-session"
     },
@@ -33,8 +25,8 @@
       "dest": "/api/qr"
     },
     {
-      "src": "^/api/track$",
-      "dest": "/api/track"
+      "src": "^/api/admin/login$",
+      "dest": "/api/admin-login"
     },
     {
       "src": "^/$",

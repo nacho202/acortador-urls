@@ -204,6 +204,18 @@
             }, 2000);
         }
 
+        // Descargar QR desde el modal
+        function downloadQRFromModal(slug) {
+            const link = document.createElement('a');
+            const timestamp = Date.now();
+            link.href = `/api/qr?slug=${slug}&t=${timestamp}`;
+            link.download = `qr-${slug}.png`;
+            link.target = '_blank';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
         // Agregar al historial local
         function addToHistory(linkData) {
             const history = getHistory();
@@ -246,7 +258,7 @@
                     </div>
                     <div class="link-actions">
                         <button onclick="copyLink('${link.slug}')" class="btn-small">Copiar</button>
-                        <button onclick="viewStats('${link.slug}')" class="btn-small">Estadísticas</button>
+                        <button onclick="viewQR('${link.slug}')" class="btn-small">Ver QR</button>
                         <button onclick="editLink('${link.slug}')" class="btn-small">Editar</button>
                         <button onclick="deleteLink('${link.slug}')" class="btn-small danger">Eliminar</button>
                     </div>
@@ -262,105 +274,32 @@
             });
         }
 
-        // Ver estadísticas
-        async function viewStats(slug) {
-            try {
-                const response = await fetch(`/api/link-stats?slug=${slug}`);
-                const stats = await response.json();
-                
-                if (response.ok) {
-                    showStatsModal(stats);
-                } else {
-                    alert(`Error: ${stats.error}`);
-                }
-            } catch (error) {
-                console.error('Error obteniendo estadísticas:', error);
-                alert('Error al obtener estadísticas');
-            }
-        }
-
-        // Mostrar modal de estadísticas
-        function showStatsModal(stats) {
+        // Ver QR
+        function viewQR(slug) {
+            // Crear modal para mostrar QR
             const modal = document.createElement('div');
             modal.className = 'modal';
             modal.innerHTML = `
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h3>Estadísticas de /${stats.slug}</h3>
+                        <h3>Código QR</h3>
                         <button onclick="closeModal()" class="close-btn">&times;</button>
                     </div>
                     <div class="modal-body">
-                        <div class="stats-grid">
-                            <div class="stat-card">
-                                <h4>Total de Clicks</h4>
-                                <div class="stat-value">${stats.totalClicks}</div>
-                            </div>
-                            <div class="stat-card">
-                                <h4>Últimos 14 días</h4>
-                                <div class="chart-container">
-                                    <canvas id="clicksChart" width="400" height="200"></canvas>
-                                </div>
-                            </div>
-                            <div class="stat-card">
-                                <h4>Top Países</h4>
-                                <ul class="stat-list">
-                                    ${stats.topGeo.map(item => `<li>${item.location}: ${item.clicks}</li>`).join('')}
-                                </ul>
-                            </div>
-                            <div class="stat-card">
-                                <h4>Top Referrers</h4>
-                                <ul class="stat-list">
-                                    ${stats.topReferrers.map(item => `<li>${item.referrer}: ${item.clicks}</li>`).join('')}
-                                </ul>
-                            </div>
-                            <div class="stat-card">
-                                <h4>Dispositivos</h4>
-                                <ul class="stat-list">
-                                    ${stats.devices.map(item => `<li>${item.device}: ${item.clicks}</li>`).join('')}
-                                </ul>
-                            </div>
-                            <div class="stat-card">
-                                <h4>Navegadores</h4>
-                                <ul class="stat-list">
-                                    ${stats.browsers.map(item => `<li>${item.browser}: ${item.clicks}</li>`).join('')}
-                                </ul>
-                            </div>
+                        <div class="qr-display">
+                            <img src="/api/qr?slug=${slug}&t=${Date.now()}" alt="Código QR" style="max-width: 300px; height: auto;">
+                            <p>Escanea el código QR para acceder al enlace</p>
+                            <button onclick="downloadQRFromModal('${slug}')" class="btn">Descargar QR</button>
                         </div>
                     </div>
                 </div>
             `;
             
             document.body.appendChild(modal);
-            
-            // Crear gráfico simple
-            setTimeout(() => {
-                const canvas = document.getElementById('clicksChart');
-                if (canvas) {
-                    drawSimpleChart(canvas, stats.byDay);
-                }
-            }, 100);
+            modal.style.display = 'flex';
         }
 
-        // Dibujar gráfico simple
-        function drawSimpleChart(canvas, data) {
-            const ctx = canvas.getContext('2d');
-            const width = canvas.width;
-            const height = canvas.height;
-            
-            ctx.clearRect(0, 0, width, height);
-            
-            const maxClicks = Math.max(...data.map(d => d.clicks));
-            const barWidth = width / data.length;
-            
-            data.forEach((item, index) => {
-                const barHeight = (item.clicks / maxClicks) * height;
-                const x = index * barWidth;
-                const y = height - barHeight;
-                
-                ctx.fillStyle = '#007bff';
-                ctx.fillRect(x, y, barWidth - 2, barHeight);
-            });
-        }
+
 
         // Cerrar modal
         function closeModal() {
