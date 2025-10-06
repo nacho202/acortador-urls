@@ -2,7 +2,7 @@
  * API de links que funciona
  */
 
-const { saveUrl } = require('./redirect.js');
+const { set, get, zadd, hset } = require('../src/lib/store');
 
 export const config = {
   runtime: 'nodejs',
@@ -39,8 +39,20 @@ export default async function handler(req, res) {
       const finalSlug = customSlug || Math.random().toString(36).substring(2, 9);
       const now = Date.now();
 
-      // Guardar URL en el almacenamiento
-      saveUrl(finalSlug, url);
+      // Guardar URL en la base de datos
+      await set(`url:${finalSlug}`, url);
+      
+      // Guardar metadatos del link
+      await hset(`link:${finalSlug}`, {
+        url: url,
+        created: now,
+        enabled: enabled,
+        clicks: 0
+      });
+      
+      // Agregar a la lista de links del usuario
+      await zadd(`user:${sid}:links`, now, finalSlug);
+      
       console.log(`URL guardada: ${finalSlug} -> ${url}`);
 
       // Devolver resultado exitoso
@@ -70,10 +82,27 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Parámetro mine=1 requerido' });
       }
 
-      // Devolver lista vacía por ahora
+      // Obtener links del usuario desde la base de datos
+      const { zrange, hgetall } = require('../src/lib/store');
+      const userLinks = await zrange(`user:${sid}:links`, 0, -1);
+      
+      const links = [];
+      for (const slug of userLinks) {
+        const metadata = await hgetall(`link:${slug}`);
+        if (metadata && metadata.url) {
+          links.push({
+            slug: slug,
+            url: metadata.url,
+            created: metadata.created,
+            enabled: metadata.enabled === 'true',
+            clicks: parseInt(metadata.clicks) || 0
+          });
+        }
+      }
+      
       return res.status(200).json({ 
-        links: [],
-        message: 'No hay links guardados'
+        links: links,
+        message: links.length > 0 ? 'Links obtenidos exitosamente' : 'No hay links guardados'
       });
 
     } catch (error) {

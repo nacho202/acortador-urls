@@ -2,25 +2,11 @@
  * API de redirección con tracking
  */
 
+const { get, incr, hgetall } = require('../src/lib/store');
+
 export const config = {
   runtime: 'nodejs',
 };
-
-// Almacenamiento simple en memoria para URLs
-const urlStorage = new Map();
-
-// Función para guardar URL
-function saveUrl(slug, url) {
-  urlStorage.set(slug, url);
-}
-
-// Función para obtener URL
-function getUrl(slug) {
-  return urlStorage.get(slug);
-}
-
-// Exportar para usar con require
-module.exports = { saveUrl, getUrl };
 
 export default async function handler(req, res) {
   const { slug } = req.query;
@@ -30,8 +16,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Buscar URL en el almacenamiento
-    const destinationUrl = getUrl(slug);
+    // Buscar URL en la base de datos
+    const destinationUrl = await get(`url:${slug}`);
     console.log(`Buscando URL para slug: ${slug}, encontrada: ${destinationUrl}`);
     
     if (!destinationUrl) {
@@ -39,7 +25,10 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'Enlace no encontrado' });
     }
     
-    // Log del click (opcional)
+    // Incrementar contador de clicks
+    await incr(`clicks:${slug}`);
+    
+    // Log del click
     console.log(`Click en enlace: ${slug} -> ${destinationUrl}`);
 
     // Redirección inmediata
