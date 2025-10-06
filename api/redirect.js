@@ -6,6 +6,19 @@ export const config = {
   runtime: 'nodejs',
 };
 
+// Almacenamiento simple en memoria para URLs
+const urlStorage = new Map();
+
+// Función para guardar URL
+export function saveUrl(slug, url) {
+  urlStorage.set(slug, url);
+}
+
+// Función para obtener URL
+export function getUrl(slug) {
+  return urlStorage.get(slug);
+}
+
 export default async function handler(req, res) {
   const { slug } = req.query;
 
@@ -14,27 +27,15 @@ export default async function handler(req, res) {
   }
 
   try {
-    // URL de destino (por ahora Google, en una versión completa buscarías en Redis)
-    const destinationUrl = 'https://www.google.com';
+    // Buscar URL en el almacenamiento
+    const destinationUrl = getUrl(slug);
     
-    // Fire-and-forget tracking (no esperamos respuesta)
-    const trackingUrl = `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}/api/track`;
+    if (!destinationUrl) {
+      return res.status(404).json({ error: 'Enlace no encontrado' });
+    }
     
-    fetch(trackingUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': req.headers['user-agent'] || '',
-        'Referer': req.headers.referer || req.headers.referrer || '',
-        'X-Forwarded-For': req.headers['x-forwarded-for'] || '',
-        'X-Vercel-IP-Country': req.headers['x-vercel-ip-country'] || '',
-        'X-Vercel-IP-Country-Region': req.headers['x-vercel-ip-country-region'] || ''
-      },
-      body: JSON.stringify({ slug }),
-      keepalive: true
-    }).catch(error => {
-      console.error('Error enviando tracking:', error);
-    });
+    // Log del click (opcional)
+    console.log(`Click en enlace: ${slug} -> ${destinationUrl}`);
 
     // Redirección inmediata
     return res.redirect(302, destinationUrl);

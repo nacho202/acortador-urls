@@ -29,6 +29,10 @@
       "dest": "/api/admin-login"
     },
     {
+      "src": "^/api/admin/links$",
+      "dest": "/api/admin-links"
+    },
+    {
       "src": "^/$",
       "dest": "/public/index.html"
     },

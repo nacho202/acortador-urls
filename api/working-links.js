@@ -2,6 +2,8 @@
  * API de links que funciona
  */
 
+import { saveUrl } from './redirect.js';
+
 export const config = {
   runtime: 'nodejs',
 };
@@ -36,6 +38,9 @@ export default async function handler(req, res) {
 
       const finalSlug = customSlug || Math.random().toString(36).substring(2, 9);
       const now = Date.now();
+
+      // Guardar URL en el almacenamiento
+      saveUrl(finalSlug, url);
 
       // Devolver resultado exitoso
       return res.status(201).json({
