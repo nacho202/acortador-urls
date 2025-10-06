@@ -3,10 +3,34 @@
  * Auto-detecta el proveedor basado en variables de entorno
  */
 
+// Función para cargar variables de entorno en desarrollo
+async function loadEnvVars() {
+  if (process.env.NODE_ENV !== 'production') {
+    try {
+      const { config } = await import('dotenv');
+      config({ path: '.env.local' });
+    } catch (error) {
+      // dotenv no está disponible o no hay archivo .env.local
+    }
+  }
+}
+
 let redis;
 
 // Función para inicializar el almacenamiento
 async function initializeRedis() {
+  // Cargar variables de entorno si es necesario
+  await loadEnvVars();
+  
+  // Debug: Mostrar información sobre variables de entorno
+  console.log('🔍 Debug - Variables de entorno:');
+  console.log('  USE_UPSTASH:', process.env.USE_UPSTASH);
+  console.log('  UPSTASH_REDIS_REST_URL:', process.env.UPSTASH_REDIS_REST_URL ? 'Configurada' : 'No configurada');
+  console.log('  UPSTASH_REDIS_REST_TOKEN:', process.env.UPSTASH_REDIS_REST_TOKEN ? 'Configurada' : 'No configurada');
+  console.log('  KV_REST_API_URL:', process.env.KV_REST_API_URL ? 'Configurada' : 'No configurada');
+  console.log('  KV_REST_API_TOKEN:', process.env.KV_REST_API_TOKEN ? 'Configurada' : 'No configurada');
+  console.log('  NODE_ENV:', process.env.NODE_ENV);
+  
   if (process.env.USE_UPSTASH === '1') {
     // Usar Upstash Redis
     if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
