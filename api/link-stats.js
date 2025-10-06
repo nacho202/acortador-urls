@@ -24,44 +24,57 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Sesión requerida' });
     }
 
-    // Por ahora, devolvemos estadísticas de ejemplo
+    // Por ahora, devolvemos estadísticas de ejemplo con datos más realistas
+    // En una versión completa, aquí consultarías Redis para obtener datos reales
+    const now = Date.now();
+    const totalClicks = Math.floor(Math.random() * 50) + 5;
+    
     return res.status(200).json({
       slug: slug,
-      totalClicks: Math.floor(Math.random() * 100) + 10,
-      byDay: Array.from({ length: 14 }, (_, i) => ({
-        date: new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        clicks: Math.floor(Math.random() * 20)
-      })),
+      totalClicks: totalClicks,
+      byDay: Array.from({ length: 14 }, (_, i) => {
+        const date = new Date(now - i * 24 * 60 * 60 * 1000);
+        return {
+          date: date.toISOString().split('T')[0],
+          clicks: Math.floor(Math.random() * Math.min(10, totalClicks / 7))
+        };
+      }).reverse(),
       topGeo: [
-        { location: 'US', clicks: 25 },
-        { location: 'ES', clicks: 15 },
-        { location: 'MX', clicks: 10 }
+        { location: 'US', clicks: Math.floor(totalClicks * 0.4) },
+        { location: 'ES', clicks: Math.floor(totalClicks * 0.25) },
+        { location: 'MX', clicks: Math.floor(totalClicks * 0.15) },
+        { location: 'AR', clicks: Math.floor(totalClicks * 0.1) },
+        { location: 'CO', clicks: Math.floor(totalClicks * 0.1) }
       ],
       topReferrers: [
-        { referrer: 'google.com', clicks: 30 },
-        { referrer: 'direct', clicks: 20 },
-        { referrer: 'facebook.com', clicks: 10 }
+        { referrer: 'direct', clicks: Math.floor(totalClicks * 0.4) },
+        { referrer: 'google.com', clicks: Math.floor(totalClicks * 0.3) },
+        { referrer: 'facebook.com', clicks: Math.floor(totalClicks * 0.15) },
+        { referrer: 'twitter.com', clicks: Math.floor(totalClicks * 0.1) },
+        { referrer: 'instagram.com', clicks: Math.floor(totalClicks * 0.05) }
       ],
       devices: [
-        { device: 'mobile', clicks: 40 },
-        { device: 'desktop', clicks: 30 },
-        { device: 'tablet', clicks: 10 }
+        { device: 'mobile', clicks: Math.floor(totalClicks * 0.6) },
+        { device: 'desktop', clicks: Math.floor(totalClicks * 0.35) },
+        { device: 'tablet', clicks: Math.floor(totalClicks * 0.05) }
       ],
       os: [
-        { os: 'Windows', clicks: 35 },
-        { os: 'Android', clicks: 25 },
-        { os: 'iOS', clicks: 15 }
+        { os: 'Android', clicks: Math.floor(totalClicks * 0.4) },
+        { os: 'Windows', clicks: Math.floor(totalClicks * 0.3) },
+        { os: 'iOS', clicks: Math.floor(totalClicks * 0.2) },
+        { os: 'macOS', clicks: Math.floor(totalClicks * 0.1) }
       ],
       browsers: [
-        { browser: 'Chrome', clicks: 45 },
-        { browser: 'Safari', clicks: 20 },
-        { browser: 'Firefox', clicks: 15 }
+        { browser: 'Chrome', clicks: Math.floor(totalClicks * 0.5) },
+        { browser: 'Safari', clicks: Math.floor(totalClicks * 0.25) },
+        { browser: 'Firefox', clicks: Math.floor(totalClicks * 0.15) },
+        { browser: 'Edge', clicks: Math.floor(totalClicks * 0.1) }
       ],
       metadata: {
-        createdAt: Date.now() - 7 * 24 * 60 * 60 * 1000,
+        createdAt: now - 7 * 24 * 60 * 60 * 1000,
         enabled: true,
         ttl: null,
-        lastUpdateAt: Date.now()
+        lastUpdateAt: now
       }
     });
 

@@ -33,6 +33,10 @@
       "dest": "/api/qr"
     },
     {
+      "src": "^/api/track$",
+      "dest": "/api/track"
+    },
+    {
       "src": "^/$",
       "dest": "/public/index.html"
     },
