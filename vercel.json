@@ -2,11 +2,11 @@
   "routes": [
     {
       "src": "^/api/links$",
-      "dest": "/api/links-simple"
+      "dest": "/api/working-links"
     },
     {
       "src": "^/api/session$",
-      "dest": "/api/session-simple"
+      "dest": "/api/working-session"
     },
     {
       "src": "^/api/links/([^/]+)/stats$",
