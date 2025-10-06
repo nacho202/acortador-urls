@@ -1,8 +1,8 @@
 /**
- * API para ver estadísticas de links
+ * API para ver estadísticas simples - solo clicks
  */
 
-const { getRealStats, getConsistentData } = require('./storage');
+import { getClickCount } from './track.js';
 
 export const config = {
   runtime: 'nodejs',
@@ -26,18 +26,23 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Sesión requerida' });
     }
 
-    // Obtener estadísticas reales o consistentes
-    const stats = getRealStats(slug);
-    
-    // Debug: ver qué datos estamos devolviendo
-    console.log(`Stats for ${slug}:`, {
-      totalClicks: stats.totalClicks,
-      hasRealClicks: stats.totalClicks > 0
-    });
+    // Obtener solo el contador de clicks
+    const totalClicks = getClickCount(slug);
     
     return res.status(200).json({
       slug: slug,
-      ...stats,
+      totalClicks: totalClicks,
+      byDay: Array.from({ length: 14 }, (_, i) => {
+        return {
+          date: new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          clicks: 0 // Simplificado - no trackeamos por día
+        };
+      }).reverse(),
+      topGeo: [],
+      topReferrers: [],
+      devices: [],
+      os: [],
+      browsers: [],
       metadata: {
         createdAt: Date.now() - 7 * 24 * 60 * 60 * 1000,
         enabled: true,

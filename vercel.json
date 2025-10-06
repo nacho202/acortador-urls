@@ -37,10 +37,6 @@
       "dest": "/api/track"
     },
     {
-      "src": "^/api/debug-storage$",
-      "dest": "/api/debug-storage"
-    },
-    {
       "src": "^/$",
       "dest": "/public/index.html"
     },
