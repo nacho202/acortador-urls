@@ -43,12 +43,10 @@ export default async function handler(req, res) {
       await set(`url:${finalSlug}`, url);
       
       // Guardar metadatos del link
-      await hset(`link:${finalSlug}`, {
-        url: url,
-        created: now,
-        enabled: enabled,
-        clicks: 0
-      });
+      await hset(`link:${finalSlug}`, 'url', url);
+      await hset(`link:${finalSlug}`, 'created', now);
+      await hset(`link:${finalSlug}`, 'enabled', enabled);
+      await hset(`link:${finalSlug}`, 'clicks', 0);
       
       // Agregar a la lista de links del usuario
       await zadd(`user:${sid}:links`, now, finalSlug);

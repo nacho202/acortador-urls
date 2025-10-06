@@ -8,12 +8,32 @@ let redis;
 // Auto-detección del proveedor
 if (process.env.USE_UPSTASH === '1') {
   // Usar Upstash Redis
-  const { Redis } = require('@upstash/redis');
-  redis = Redis.fromEnv();
+  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+    try {
+      const { Redis } = require('@upstash/redis');
+      redis = Redis.fromEnv();
+    } catch (error) {
+      console.warn('Upstash Redis no disponible, usando almacenamiento en memoria');
+      redis = require('./store-memory');
+    }
+  } else {
+    console.warn('Variables de entorno de Upstash no configuradas, usando almacenamiento en memoria');
+    redis = require('./store-memory');
+  }
 } else {
   // Usar Vercel KV por defecto
-  const { kv } = require('@vercel/kv');
-  redis = kv;
+  if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+    try {
+      const { kv } = require('@vercel/kv');
+      redis = kv;
+    } catch (error) {
+      console.warn('Vercel KV no disponible, usando almacenamiento en memoria');
+      redis = require('./store-memory');
+    }
+  } else {
+    console.warn('Variables de entorno de Vercel KV no configuradas, usando almacenamiento en memoria');
+    redis = require('./store-memory');
+  }
 }
 
 /**
