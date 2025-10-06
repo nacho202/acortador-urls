@@ -49,6 +49,7 @@
                     <div class="qr-section">
                         <img id="qrCode" alt="Código QR">
                         <p>Escanea el código QR para acceder al enlace</p>
+                        <button id="downloadQrBtn" onclick="downloadQR()" class="btn-small">Descargar QR</button>
                     </div>
                 </div>
             </section>
@@ -160,6 +161,22 @@
             setTimeout(() => {
                 copyBtn.textContent = originalText;
             }, 2000);
+        }
+
+        // Descargar QR
+        function downloadQR() {
+            const qrImg = document.getElementById('qrCode');
+            const shortUrl = document.getElementById('shortUrl').value;
+            const slug = shortUrl.split('/').pop();
+            
+            // Crear enlace de descarga
+            const link = document.createElement('a');
+            link.href = `/api/qr?slug=${slug}`;
+            link.download = `qr-${slug}.svg`;
+            link.target = '_blank';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         // Agregar al historial local
