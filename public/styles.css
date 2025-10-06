@@ -177,6 +177,13 @@ button.secondary:hover {
     border-radius: 8px;
 }
 
+.qr-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 10px;
+}
+
 .qr-section p {
     margin-top: 10px;
     color: #666;
