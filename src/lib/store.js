@@ -1,6 +1,5 @@
 /**
- * Wrapper para Vercel KV y Upstash Redis
- * Auto-detecta el proveedor basado en variables de entorno
+ * Wrapper para Upstash Redis
  */
 
 // Función para cargar variables de entorno en desarrollo
@@ -22,43 +21,21 @@ async function initializeRedis() {
   // Cargar variables de entorno si es necesario
   await loadEnvVars();
   
-  // Debug: Mostrar información sobre variables de entorno
-  console.log('🔍 Debug - Variables de entorno:');
-  console.log('  USE_UPSTASH:', process.env.USE_UPSTASH);
-  console.log('  UPSTASH_REDIS_REST_URL:', process.env.UPSTASH_REDIS_REST_URL ? 'Configurada' : 'No configurada');
-  console.log('  UPSTASH_REDIS_REST_TOKEN:', process.env.UPSTASH_REDIS_REST_TOKEN ? 'Configurada' : 'No configurada');
-  console.log('  KV_REST_API_URL:', process.env.KV_REST_API_URL ? 'Configurada' : 'No configurada');
-  console.log('  KV_REST_API_TOKEN:', process.env.KV_REST_API_TOKEN ? 'Configurada' : 'No configurada');
-  console.log('  NODE_ENV:', process.env.NODE_ENV);
-  
-  if (process.env.USE_UPSTASH === '1') {
-    // Usar Upstash Redis
-    if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
-      try {
-        const { Redis } = await import('@upstash/redis');
-        return Redis.fromEnv();
-      } catch (error) {
-        console.warn('Upstash Redis no disponible, usando almacenamiento en memoria');
-        return await import('./store-memory.js');
-      }
-    } else {
-      console.warn('Variables de entorno de Upstash no configuradas, usando almacenamiento en memoria');
+  // Verificar variables de Upstash Redis
+  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+    try {
+      const { Redis } = await import('@upstash/redis');
+      console.log('✅ Conectando a Upstash Redis');
+      return Redis.fromEnv();
+    } catch (error) {
+      console.error('❌ Error conectando a Upstash Redis:', error);
+      console.warn('⚠️ Usando almacenamiento en memoria como fallback');
       return await import('./store-memory.js');
     }
   } else {
-    // Usar Vercel KV por defecto
-    if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
-      try {
-        const { kv } = await import('@vercel/kv');
-        return kv;
-      } catch (error) {
-        console.warn('Vercel KV no disponible, usando almacenamiento en memoria');
-        return await import('./store-memory.js');
-      }
-    } else {
-      console.warn('Variables de entorno de Vercel KV no configuradas, usando almacenamiento en memoria');
-      return await import('./store-memory.js');
-    }
+    console.warn('⚠️ Variables de entorno de Upstash Redis no configuradas');
+    console.warn('⚠️ Usando almacenamiento en memoria');
+    return await import('./store-memory.js');
   }
 }
 
