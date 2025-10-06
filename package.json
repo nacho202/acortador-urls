@@ -1,6 +1,7 @@
 {
   "name": "acortador-urls",
   "version": "1.0.0",
+  "type": "module",
   "description": "Acortador de URLs con Redis/Vercel KV, panel admin y tracking completo",
   "main": "index.js",
   "scripts": {

@@ -2,7 +2,7 @@
  * API de redirección con tracking
  */
 
-const { get, incr, hgetall } = require('../src/lib/store');
+import { get, incr, hgetall } from '../src/lib/store.js';
 
 export const config = {
   runtime: 'nodejs',

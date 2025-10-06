@@ -5,35 +5,45 @@
 
 let redis;
 
-// Auto-detección del proveedor
-if (process.env.USE_UPSTASH === '1') {
-  // Usar Upstash Redis
-  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
-    try {
-      const { Redis } = require('@upstash/redis');
-      redis = Redis.fromEnv();
-    } catch (error) {
-      console.warn('Upstash Redis no disponible, usando almacenamiento en memoria');
-      redis = require('./store-memory');
+// Función para inicializar el almacenamiento
+async function initializeRedis() {
+  if (process.env.USE_UPSTASH === '1') {
+    // Usar Upstash Redis
+    if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+      try {
+        const { Redis } = await import('@upstash/redis');
+        return Redis.fromEnv();
+      } catch (error) {
+        console.warn('Upstash Redis no disponible, usando almacenamiento en memoria');
+        return await import('./store-memory.js');
+      }
+    } else {
+      console.warn('Variables de entorno de Upstash no configuradas, usando almacenamiento en memoria');
+      return await import('./store-memory.js');
     }
   } else {
-    console.warn('Variables de entorno de Upstash no configuradas, usando almacenamiento en memoria');
-    redis = require('./store-memory');
-  }
-} else {
-  // Usar Vercel KV por defecto
-  if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
-    try {
-      const { kv } = require('@vercel/kv');
-      redis = kv;
-    } catch (error) {
-      console.warn('Vercel KV no disponible, usando almacenamiento en memoria');
-      redis = require('./store-memory');
+    // Usar Vercel KV por defecto
+    if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+      try {
+        const { kv } = await import('@vercel/kv');
+        return kv;
+      } catch (error) {
+        console.warn('Vercel KV no disponible, usando almacenamiento en memoria');
+        return await import('./store-memory.js');
+      }
+    } else {
+      console.warn('Variables de entorno de Vercel KV no configuradas, usando almacenamiento en memoria');
+      return await import('./store-memory.js');
     }
-  } else {
-    console.warn('Variables de entorno de Vercel KV no configuradas, usando almacenamiento en memoria');
-    redis = require('./store-memory');
   }
+}
+
+// Inicializar redis de forma lazy
+async function getRedis() {
+  if (!redis) {
+    redis = await initializeRedis();
+  }
+  return redis;
 }
 
 /**
@@ -41,7 +51,8 @@ if (process.env.USE_UPSTASH === '1') {
  */
 async function get(key) {
   try {
-    return await redis.get(key);
+    const client = await getRedis();
+    return await client.get(key);
   } catch (error) {
     console.error('Error getting key:', key, error);
     return null;
@@ -53,10 +64,11 @@ async function get(key) {
  */
 async function set(key, value, ttlSeconds = null) {
   try {
+    const client = await getRedis();
     if (ttlSeconds) {
-      return await redis.setex(key, ttlSeconds, value);
+      return await client.setex(key, ttlSeconds, value);
     }
-    return await redis.set(key, value);
+    return await client.set(key, value);
   } catch (error) {
     console.error('Error setting key:', key, error);
     return false;
@@ -68,7 +80,8 @@ async function set(key, value, ttlSeconds = null) {
  */
 async function hset(key, field, value) {
   try {
-    return await redis.hset(key, field, value);
+    const client = await getRedis();
+    return await client.hset(key, field, value);
   } catch (error) {
     console.error('Error hsetting key:', key, error);
     return false;
@@ -80,7 +93,8 @@ async function hset(key, field, value) {
  */
 async function hgetall(key) {
   try {
-    return await redis.hgetall(key);
+    const client = await getRedis();
+    return await client.hgetall(key);
   } catch (error) {
     console.error('Error hgetall key:', key, error);
     return {};
@@ -92,7 +106,8 @@ async function hgetall(key) {
  */
 async function incr(key) {
   try {
-    return await redis.incr(key);
+    const client = await getRedis();
+    return await client.incr(key);
   } catch (error) {
     console.error('Error incr key:', key, error);
     return 0;
@@ -104,7 +119,8 @@ async function incr(key) {
  */
 async function zadd(key, score, member) {
   try {
-    return await redis.zadd(key, score, member);
+    const client = await getRedis();
+    return await client.zadd(key, score, member);
   } catch (error) {
     console.error('Error zadd key:', key, error);
     return 0;
@@ -116,7 +132,8 @@ async function zadd(key, score, member) {
  */
 async function zincrby(key, increment, member) {
   try {
-    return await redis.zincrby(key, increment, member);
+    const client = await getRedis();
+    return await client.zincrby(key, increment, member);
   } catch (error) {
     console.error('Error zincrby key:', key, error);
     return 0;
@@ -128,10 +145,11 @@ async function zincrby(key, increment, member) {
  */
 async function zrange(key, start, stop, withScores = false) {
   try {
+    const client = await getRedis();
     if (withScores) {
-      return await redis.zrange(key, start, stop, 'WITHSCORES');
+      return await client.zrange(key, start, stop, 'WITHSCORES');
     }
-    return await redis.zrange(key, start, stop);
+    return await client.zrange(key, start, stop);
   } catch (error) {
     console.error('Error zrange key:', key, error);
     return [];
@@ -143,7 +161,8 @@ async function zrange(key, start, stop, withScores = false) {
  */
 async function zrem(key, member) {
   try {
-    return await redis.zrem(key, member);
+    const client = await getRedis();
+    return await client.zrem(key, member);
   } catch (error) {
     console.error('Error zrem key:', key, error);
     return 0;
@@ -155,7 +174,8 @@ async function zrem(key, member) {
  */
 async function exists(key) {
   try {
-    return await redis.exists(key);
+    const client = await getRedis();
+    return await client.exists(key);
   } catch (error) {
     console.error('Error exists key:', key, error);
     return false;
@@ -167,7 +187,8 @@ async function exists(key) {
  */
 async function rename(oldKey, newKey) {
   try {
-    return await redis.rename(oldKey, newKey);
+    const client = await getRedis();
+    return await client.rename(oldKey, newKey);
   } catch (error) {
     console.error('Error rename key:', oldKey, error);
     return false;
@@ -179,7 +200,8 @@ async function rename(oldKey, newKey) {
  */
 async function del(key) {
   try {
-    return await redis.del(key);
+    const client = await getRedis();
+    return await client.del(key);
   } catch (error) {
     console.error('Error del key:', key, error);
     return false;
@@ -191,7 +213,8 @@ async function del(key) {
  */
 async function expire(key, seconds) {
   try {
-    return await redis.expire(key, seconds);
+    const client = await getRedis();
+    return await client.expire(key, seconds);
   } catch (error) {
     console.error('Error expire key:', key, error);
     return false;
@@ -203,14 +226,15 @@ async function expire(key, seconds) {
  */
 async function ttl(key) {
   try {
-    return await redis.ttl(key);
+    const client = await getRedis();
+    return await client.ttl(key);
   } catch (error) {
     console.error('Error ttl key:', key, error);
     return -1;
   }
 }
 
-module.exports = {
+export {
   get,
   set,
   hset,

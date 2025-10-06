@@ -2,7 +2,7 @@
  * API de links que funciona
  */
 
-const { set, get, zadd, hset } = require('../src/lib/store');
+import { set, get, zadd, hset, zrange, hgetall } from '../src/lib/store.js';
 
 export const config = {
   runtime: 'nodejs',
@@ -81,7 +81,6 @@ export default async function handler(req, res) {
       }
 
       // Obtener links del usuario desde la base de datos
-      const { zrange, hgetall } = require('../src/lib/store');
       const userLinks = await zrange(`user:${sid}:links`, 0, -1);
       
       const links = [];
