@@ -10,14 +10,17 @@ export const config = {
 const urlStorage = new Map();
 
 // Función para guardar URL
-export function saveUrl(slug, url) {
+function saveUrl(slug, url) {
   urlStorage.set(slug, url);
 }
 
 // Función para obtener URL
-export function getUrl(slug) {
+function getUrl(slug) {
   return urlStorage.get(slug);
 }
+
+// Exportar para usar con require
+module.exports = { saveUrl, getUrl };
 
 export default async function handler(req, res) {
   const { slug } = req.query;
@@ -29,8 +32,10 @@ export default async function handler(req, res) {
   try {
     // Buscar URL en el almacenamiento
     const destinationUrl = getUrl(slug);
+    console.log(`Buscando URL para slug: ${slug}, encontrada: ${destinationUrl}`);
     
     if (!destinationUrl) {
+      console.log(`URL no encontrada para slug: ${slug}`);
       return res.status(404).json({ error: 'Enlace no encontrado' });
     }
     

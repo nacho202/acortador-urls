@@ -2,7 +2,7 @@
  * API para listar enlaces del admin
  */
 
-import { getUrl } from './redirect.js';
+const { getUrl } = require('./redirect.js');
 
 export const config = {
   runtime: 'nodejs',
@@ -32,14 +32,16 @@ export default async function handler(req, res) {
         url: 'https://www.google.com',
         totalClicks: 15,
         createdAt: Date.now() - 7 * 24 * 60 * 60 * 1000,
-        enabled: true
+        enabled: true,
+        ownerSid: 'user1234567890abcdef'
       },
       {
         slug: 'ejemplo2',
         url: 'https://www.github.com',
         totalClicks: 8,
         createdAt: Date.now() - 3 * 24 * 60 * 60 * 1000,
-        enabled: true
+        enabled: true,
+        ownerSid: 'user0987654321fedcba'
       }
     ];
 

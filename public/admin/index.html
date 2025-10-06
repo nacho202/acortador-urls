@@ -268,7 +268,7 @@
                     </td>
                     <td>${link.totalClicks}</td>
                     <td>${new Date(link.createdAt).toLocaleDateString()}</td>
-                    <td><code>${link.ownerSid.substring(0, 8)}...</code></td>
+                    <td><code>${link.ownerSid ? link.ownerSid.substring(0, 8) + '...' : 'N/A'}</code></td>
                     <td class="actions">
                         <button onclick="editLink('${link.slug}')" class="btn-small">Editar</button>
                         <button onclick="viewStats('${link.slug}')" class="btn-small">Stats</button>

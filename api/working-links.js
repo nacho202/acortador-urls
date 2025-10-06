@@ -2,7 +2,7 @@
  * API de links que funciona
  */
 
-import { saveUrl } from './redirect.js';
+const { saveUrl } = require('./redirect.js');
 
 export const config = {
   runtime: 'nodejs',
@@ -41,6 +41,7 @@ export default async function handler(req, res) {
 
       // Guardar URL en el almacenamiento
       saveUrl(finalSlug, url);
+      console.log(`URL guardada: ${finalSlug} -> ${url}`);
 
       // Devolver resultado exitoso
       return res.status(201).json({
