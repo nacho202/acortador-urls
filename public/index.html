@@ -172,7 +172,7 @@
             // Crear enlace de descarga
             const link = document.createElement('a');
             link.href = `/api/qr?slug=${slug}`;
-            link.download = `qr-${slug}.svg`;
+            link.download = `qr-${slug}.png`;
             link.target = '_blank';
             document.body.appendChild(link);
             link.click();
