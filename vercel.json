@@ -13,6 +13,18 @@
       "dest": "/api/link-edit"
     },
     {
+      "src": "^/api/link-delete$",
+      "dest": "/api/link-delete"
+    },
+    {
+      "src": "^/api/link-edit$",
+      "dest": "/api/link-edit"
+    },
+    {
+      "src": "^/api/link-stats$",
+      "dest": "/api/link-stats"
+    },
+    {
       "src": "^/api/session$",
       "dest": "/api/working-session"
     },

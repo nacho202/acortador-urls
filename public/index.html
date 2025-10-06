@@ -223,7 +223,7 @@
         // Ver estadísticas
         async function viewStats(slug) {
             try {
-                const response = await fetch(`/api/links/${slug}/stats`);
+                const response = await fetch(`/api/link-stats?slug=${slug}`);
                 const stats = await response.json();
                 
                 if (response.ok) {
@@ -334,7 +334,7 @@
             if (!newUrl) return;
             
             try {
-                const response = await fetch(`/api/links/${slug}`, {
+                const response = await fetch(`/api/link-edit?slug=${slug}`, {
                     method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json'
