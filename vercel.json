@@ -6,11 +6,11 @@
     },
     {
       "src": "^/api/links/([^/]+)/stats$",
-      "dest": "/api/link-actions"
+      "dest": "/api/link-stats"
     },
     {
       "src": "^/api/links/([^/]+)$",
-      "dest": "/api/link-actions"
+      "dest": "/api/link-edit"
     },
     {
       "src": "^/api/session$",

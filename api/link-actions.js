@@ -11,6 +11,11 @@ export default async function handler(req, res) {
   const { slug } = req.query;
   const sid = req.cookies.sid;
 
+  // Debug: ver qué está llegando
+  console.log('Method:', method);
+  console.log('Query:', req.query);
+  console.log('URL:', req.url);
+
   if (!slug) {
     return res.status(400).json({ error: 'Slug requerido' });
   }

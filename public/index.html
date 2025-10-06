@@ -361,7 +361,7 @@
             if (!confirm('¿Estás seguro de que quieres eliminar este enlace?')) return;
             
             try {
-                const response = await fetch(`/api/links/${slug}`, {
+                const response = await fetch(`/api/link-delete?slug=${slug}`, {
                     method: 'DELETE'
                 });
                 
