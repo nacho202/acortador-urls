@@ -25,50 +25,23 @@ function getConsistentData(slug) {
   const hash = generateConsistentHash(slug);
   const seed = hash % 1000; // Usar como semilla
   
-  // Generar datos consistentes basados en la semilla
-  const totalClicks = (seed % 50) + 5;
+  // Empezar con 0 clicks para enlaces nuevos
+  const totalClicks = 0;
   
   return {
     totalClicks,
     seed,
     byDay: Array.from({ length: 14 }, (_, i) => {
-      const dayHash = generateConsistentHash(slug + i);
       return {
         date: new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        clicks: Math.floor((dayHash % Math.min(10, totalClicks / 7)) + 1)
+        clicks: 0
       };
     }).reverse(),
-    topGeo: [
-      { location: 'US', clicks: Math.floor(totalClicks * 0.4) },
-      { location: 'ES', clicks: Math.floor(totalClicks * 0.25) },
-      { location: 'MX', clicks: Math.floor(totalClicks * 0.15) },
-      { location: 'AR', clicks: Math.floor(totalClicks * 0.1) },
-      { location: 'CO', clicks: Math.floor(totalClicks * 0.1) }
-    ],
-    topReferrers: [
-      { referrer: 'direct', clicks: Math.floor(totalClicks * 0.4) },
-      { referrer: 'google.com', clicks: Math.floor(totalClicks * 0.3) },
-      { referrer: 'facebook.com', clicks: Math.floor(totalClicks * 0.15) },
-      { referrer: 'twitter.com', clicks: Math.floor(totalClicks * 0.1) },
-      { referrer: 'instagram.com', clicks: Math.floor(totalClicks * 0.05) }
-    ],
-    devices: [
-      { device: 'mobile', clicks: Math.floor(totalClicks * 0.6) },
-      { device: 'desktop', clicks: Math.floor(totalClicks * 0.35) },
-      { device: 'tablet', clicks: Math.floor(totalClicks * 0.05) }
-    ],
-    os: [
-      { os: 'Android', clicks: Math.floor(totalClicks * 0.4) },
-      { os: 'Windows', clicks: Math.floor(totalClicks * 0.3) },
-      { os: 'iOS', clicks: Math.floor(totalClicks * 0.2) },
-      { os: 'macOS', clicks: Math.floor(totalClicks * 0.1) }
-    ],
-    browsers: [
-      { browser: 'Chrome', clicks: Math.floor(totalClicks * 0.5) },
-      { browser: 'Safari', clicks: Math.floor(totalClicks * 0.25) },
-      { browser: 'Firefox', clicks: Math.floor(totalClicks * 0.15) },
-      { browser: 'Edge', clicks: Math.floor(totalClicks * 0.1) }
-    ]
+    topGeo: [],
+    topReferrers: [],
+    devices: [],
+    os: [],
+    browsers: []
   };
 }
 
@@ -96,8 +69,21 @@ function getRealStats(slug) {
   const now = Date.now();
   
   if (clicks.length === 0) {
-    // Si no hay clicks reales, usar datos consistentes
-    return getConsistentData(slug);
+    // Si no hay clicks reales, devolver datos vacíos
+    return {
+      totalClicks: 0,
+      byDay: Array.from({ length: 14 }, (_, i) => {
+        return {
+          date: new Date(now - i * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          clicks: 0
+        };
+      }).reverse(),
+      topGeo: [],
+      topReferrers: [],
+      devices: [],
+      os: [],
+      browsers: []
+    };
   }
   
   // Procesar clicks reales

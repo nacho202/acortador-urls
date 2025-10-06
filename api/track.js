@@ -82,6 +82,7 @@ export default async function handler(req, res) {
     recordClick(slug, trackingData);
     
     // Log para debugging
+    console.log('Tracking data saved for slug:', slug);
     console.log('Tracking data:', JSON.stringify(trackingData, null, 2));
     
     return res.status(200).json({ 

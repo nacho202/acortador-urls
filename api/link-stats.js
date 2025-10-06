@@ -29,6 +29,12 @@ export default async function handler(req, res) {
     // Obtener estadísticas reales o consistentes
     const stats = getRealStats(slug);
     
+    // Debug: ver qué datos estamos devolviendo
+    console.log(`Stats for ${slug}:`, {
+      totalClicks: stats.totalClicks,
+      hasRealClicks: stats.totalClicks > 0
+    });
+    
     return res.status(200).json({
       slug: slug,
       ...stats,
