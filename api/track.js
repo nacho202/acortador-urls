@@ -2,6 +2,8 @@
  * API de tracking real para estadísticas
  */
 
+const { recordClick } = require('./storage');
+
 export const config = {
   runtime: 'nodejs',
 };
@@ -76,10 +78,12 @@ export default async function handler(req, res) {
       userAgent
     };
     
-    // Por ahora, solo logueamos los datos (en una versión completa, aquí guardarías en Redis)
+    // Guardar en el almacenamiento en memoria
+    recordClick(slug, trackingData);
+    
+    // Log para debugging
     console.log('Tracking data:', JSON.stringify(trackingData, null, 2));
     
-    // Simular guardado exitoso
     return res.status(200).json({ 
       success: true, 
       message: 'Tracking registrado',
