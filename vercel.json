@@ -33,6 +33,10 @@
       "dest": "/api/admin-links"
     },
     {
+      "src": "^/api/test-redis$",
+      "dest": "/api/test-redis-connection"
+    },
+    {
       "src": "^/$",
       "dest": "/public/index.html"
     },
