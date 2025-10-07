@@ -19,17 +19,26 @@ export default async function handler(req, res) {
   try {
     // Verificar si es admin
     const isAdmin = req.cookies.admin === '1';
+    console.log('Admin check - Cookie admin:', req.cookies.admin);
+    console.log('Admin check - isAdmin:', isAdmin);
     
     if (!isAdmin) {
+      console.log('Acceso denegado - no es admin');
       return res.status(401).json({ error: 'Acceso denegado' });
     }
 
+    console.log('Admin autorizado - obteniendo links...');
+    
     // Obtener todos los enlaces desde Redis
     const allLinks = await zrange('all:links', 0, -1);
+    console.log(`Slugs encontrados en all:links: ${allLinks.length}`, allLinks);
+    
     const links = [];
     
     for (const slug of allLinks) {
       const metadata = await hgetall(`link:${slug}`);
+      console.log(`Metadata para ${slug}:`, metadata);
+      
       if (metadata && metadata.url) {
         links.push({
           slug: slug,
@@ -44,9 +53,9 @@ export default async function handler(req, res) {
     
     // Si no hay links, devolver array vacío
     if (links.length === 0) {
-      console.log('No hay links creados todavía');
+      console.log('⚠️ No hay links creados todavía o no se pudieron cargar');
     } else {
-      console.log(`Admin: ${links.length} links encontrados`);
+      console.log(`✅ Admin: ${links.length} links encontrados`);
     }
 
     return res.status(200).json({
