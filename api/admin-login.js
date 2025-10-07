@@ -14,12 +14,23 @@ export default async function handler(req, res) {
   try {
     const { token } = req.body;
     
+    console.log('Login attempt - Token recibido:', token ? 'SI' : 'NO');
+    console.log('ADMIN_TOKEN configurado:', process.env.ADMIN_TOKEN ? 'SI' : 'NO');
+    
     if (!token) {
       return res.status(400).json({ error: 'Token requerido' });
     }
 
     // Verificar token de admin
-    if (token === process.env.ADMIN_TOKEN) {
+    const adminToken = process.env.ADMIN_TOKEN;
+    
+    if (!adminToken) {
+      console.error('ERROR: ADMIN_TOKEN no está configurado en las variables de entorno');
+      return res.status(500).json({ error: 'ADMIN_TOKEN no configurado en el servidor' });
+    }
+    
+    if (token === adminToken) {
+      console.log('Login exitoso');
       // Configurar cookie de admin
       res.setHeader('Set-Cookie', 'admin=1; HttpOnly; Secure; SameSite=Lax; Max-Age=86400');
       
@@ -28,6 +39,7 @@ export default async function handler(req, res) {
         message: 'Login exitoso' 
       });
     } else {
+      console.log('Token inválido - No coincide');
       return res.status(401).json({ error: 'Token inválido' });
     }
 
