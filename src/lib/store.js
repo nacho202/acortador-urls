@@ -21,19 +21,28 @@ async function initializeRedis() {
   // Cargar variables de entorno si es necesario
   await loadEnvVars();
   
-  // Verificar variables de Upstash Redis
-  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+  // Verificar variables de Redis (Upstash o Vercel KV)
+  const redisUrl = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+  const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
+  
+  if (redisUrl && redisToken) {
     try {
       const { Redis } = await import('@upstash/redis');
-      console.log('✅ Conectando a Upstash Redis');
-      return Redis.fromEnv();
+      console.log('✅ Conectando a Redis:', redisUrl.includes('upstash') ? 'Upstash' : 'Vercel KV');
+      
+      // Crear cliente Redis manualmente con las variables correctas
+      return new Redis({
+        url: redisUrl,
+        token: redisToken
+      });
     } catch (error) {
-      console.error('❌ Error conectando a Upstash Redis:', error);
+      console.error('❌ Error conectando a Redis:', error);
       console.warn('⚠️ Usando almacenamiento en memoria como fallback');
       return await import('./store-memory.js');
     }
   } else {
-    console.warn('⚠️ Variables de entorno de Upstash Redis no configuradas');
+    console.warn('⚠️ Variables de entorno de Redis no configuradas');
+    console.warn('⚠️ Variables disponibles:', Object.keys(process.env).filter(k => k.includes('REDIS') || k.includes('KV')));
     console.warn('⚠️ Usando almacenamiento en memoria');
     return await import('./store-memory.js');
   }

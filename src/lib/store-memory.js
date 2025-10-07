@@ -1,238 +1,178 @@
 /**
- * Almacenamiento en memoria para desarrollo local
- * Solo usar cuando no hay acceso a Redis/KV
+ * Almacenamiento en memoria como fallback
  */
 
 // Almacenamiento simple en memoria
 const memoryStore = new Map();
 const hashStore = new Map();
-const sortedSets = new Map();
+const sortedSetStore = new Map();
 
 /**
  * Obtener valor por clave
  */
-export async function get(key) {
-  try {
-    return memoryStore.get(key) || null;
-  } catch (error) {
-    console.error('Error getting key:', key, error);
-    return null;
-  }
+async function get(key) {
+  return memoryStore.get(key) || null;
 }
 
 /**
  * Establecer valor con TTL opcional
  */
-export async function set(key, value, ttlSeconds = null) {
-  try {
-    memoryStore.set(key, value);
-    if (ttlSeconds) {
-      setTimeout(() => {
-        memoryStore.delete(key);
-      }, ttlSeconds * 1000);
-    }
-    return true;
-  } catch (error) {
-    console.error('Error setting key:', key, error);
-    return false;
+async function set(key, value, ttlSeconds = null) {
+  memoryStore.set(key, value);
+  if (ttlSeconds) {
+    setTimeout(() => memoryStore.delete(key), ttlSeconds * 1000);
   }
+  return true;
 }
 
 /**
  * Establecer campo en hash
  */
-export async function hset(key, field, value) {
-  try {
-    if (!hashStore.has(key)) {
-      hashStore.set(key, new Map());
-    }
-    hashStore.get(key).set(field, value);
-    return true;
-  } catch (error) {
-    console.error('Error hsetting key:', key, error);
-    return false;
+async function hset(key, field, value) {
+  if (!hashStore.has(key)) {
+    hashStore.set(key, new Map());
   }
+  hashStore.get(key).set(field, value);
+  return 1;
 }
 
 /**
  * Obtener todos los campos de un hash
  */
-export async function hgetall(key) {
-  try {
-    const hash = hashStore.get(key);
-    if (!hash) return {};
-    
-    const result = {};
-    for (const [field, value] of hash) {
-      result[field] = value;
-    }
-    return result;
-  } catch (error) {
-    console.error('Error hgetall key:', key, error);
-    return {};
+async function hgetall(key) {
+  const hash = hashStore.get(key);
+  if (!hash) return {};
+  
+  const result = {};
+  for (const [field, value] of hash) {
+    result[field] = value;
   }
+  return result;
 }
 
 /**
  * Incrementar contador
  */
-export async function incr(key) {
-  try {
-    const current = parseInt(memoryStore.get(key) || '0');
-    const newValue = current + 1;
-    memoryStore.set(key, newValue.toString());
-    return newValue;
-  } catch (error) {
-    console.error('Error incr key:', key, error);
-    return 0;
-  }
+async function incr(key) {
+  const current = parseInt(memoryStore.get(key) || '0');
+  const newValue = current + 1;
+  memoryStore.set(key, newValue.toString());
+  return newValue;
 }
 
 /**
  * Agregar a sorted set
  */
-export async function zadd(key, score, member) {
-  try {
-    if (!sortedSets.has(key)) {
-      sortedSets.set(key, new Map());
-    }
-    sortedSets.get(key).set(member, score);
-    return 1;
-  } catch (error) {
-    console.error('Error zadd key:', key, error);
-    return 0;
+async function zadd(key, score, member) {
+  if (!sortedSetStore.has(key)) {
+    sortedSetStore.set(key, new Map());
   }
+  sortedSetStore.get(key).set(member, score);
+  return 1;
 }
 
 /**
  * Incrementar score en sorted set
  */
-export async function zincrby(key, increment, member) {
-  try {
-    if (!sortedSets.has(key)) {
-      sortedSets.set(key, new Map());
-    }
-    const current = sortedSets.get(key).get(member) || 0;
-    const newScore = current + increment;
-    sortedSets.get(key).set(member, newScore);
-    return newScore;
-  } catch (error) {
-    console.error('Error zincrby key:', key, error);
-    return 0;
+async function zincrby(key, increment, member) {
+  if (!sortedSetStore.has(key)) {
+    sortedSetStore.set(key, new Map());
   }
+  const current = sortedSetStore.get(key).get(member) || 0;
+  const newScore = current + increment;
+  sortedSetStore.get(key).set(member, newScore);
+  return newScore;
 }
 
 /**
  * Obtener rango de sorted set
  */
-export async function zrange(key, start, stop, withScores = false) {
-  try {
-    const set = sortedSets.get(key);
-    if (!set) return [];
-    
-    const entries = Array.from(set.entries())
-      .sort((a, b) => a[1] - b[1])
-      .slice(start, stop + 1);
-    
-    if (withScores) {
-      return entries.flat();
-    }
-    return entries.map(([member]) => member);
-  } catch (error) {
-    console.error('Error zrange key:', key, error);
-    return [];
+async function zrange(key, start, stop, withScores = false) {
+  const sortedSet = sortedSetStore.get(key);
+  if (!sortedSet) return [];
+  
+  const entries = Array.from(sortedSet.entries())
+    .sort((a, b) => a[1] - b[1]);
+  
+  const result = entries.slice(start, stop + 1);
+  
+  if (withScores) {
+    return result.flat();
   }
+  return result.map(([member]) => member);
 }
 
 /**
  * Remover de sorted set
  */
-export async function zrem(key, member) {
-  try {
-    const set = sortedSets.get(key);
-    if (!set) return 0;
-    
-    const existed = set.has(member);
-    set.delete(member);
-    return existed ? 1 : 0;
-  } catch (error) {
-    console.error('Error zrem key:', key, error);
-    return 0;
+async function zrem(key, member) {
+  const sortedSet = sortedSetStore.get(key);
+  if (!sortedSet) return 0;
+  
+  if (sortedSet.has(member)) {
+    sortedSet.delete(member);
+    return 1;
   }
+  return 0;
 }
 
 /**
  * Verificar si existe clave
  */
-export async function exists(key) {
-  try {
-    return memoryStore.has(key) || hashStore.has(key) || sortedSets.has(key);
-  } catch (error) {
-    console.error('Error exists key:', key, error);
-    return false;
-  }
+async function exists(key) {
+  return memoryStore.has(key) ? 1 : 0;
 }
 
 /**
  * Renombrar clave
  */
-export async function rename(oldKey, newKey) {
-  try {
-    const value = memoryStore.get(oldKey);
-    if (value !== undefined) {
-      memoryStore.set(newKey, value);
-      memoryStore.delete(oldKey);
-      return true;
-    }
-    return false;
-  } catch (error) {
-    console.error('Error rename key:', oldKey, error);
-    return false;
-  }
+async function rename(oldKey, newKey) {
+  const value = memoryStore.get(oldKey);
+  if (value === undefined) return false;
+  
+  memoryStore.set(newKey, value);
+  memoryStore.delete(oldKey);
+  return true;
 }
 
 /**
  * Eliminar clave
  */
-export async function del(key) {
-  try {
-    const memoryDeleted = memoryStore.delete(key);
-    const hashDeleted = hashStore.delete(key);
-    const setDeleted = sortedSets.delete(key);
-    return memoryDeleted || hashDeleted || setDeleted;
-  } catch (error) {
-    console.error('Error del key:', key, error);
-    return false;
-  }
+async function del(key) {
+  return memoryStore.delete(key) ? 1 : 0;
 }
 
 /**
  * Establecer expiración
  */
-export async function expire(key, seconds) {
-  try {
-    if (memoryStore.has(key)) {
-      setTimeout(() => {
-        memoryStore.delete(key);
-      }, seconds * 1000);
-      return true;
-    }
-    return false;
-  } catch (error) {
-    console.error('Error expire key:', key, error);
-    return false;
-  }
+async function expire(key, seconds) {
+  if (!memoryStore.has(key)) return 0;
+  
+  setTimeout(() => memoryStore.delete(key), seconds * 1000);
+  return 1;
 }
 
 /**
  * Obtener TTL de una clave
  */
-export async function ttl(key) {
-  try {
-    // En memoria no podemos obtener TTL real
-    return memoryStore.has(key) ? -1 : -2;
-  } catch (error) {
-    console.error('Error ttl key:', key, error);
-    return -1;
-  }
+async function ttl(key) {
+  // En memoria no podemos saber el TTL exacto
+  return memoryStore.has(key) ? -1 : -2;
 }
+
+export {
+  get,
+  set,
+  hset,
+  hgetall,
+  incr,
+  zadd,
+  zincrby,
+  zrange,
+  zrem,
+  exists,
+  rename,
+  del,
+  expire,
+  ttl
+};

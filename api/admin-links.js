@@ -2,7 +2,7 @@
  * API para listar enlaces del admin
  */
 
-const { getUrl } = require('./redirect.js');
+import { zrange, hgetall } from '../src/lib/store.js';
 
 export const config = {
   runtime: 'nodejs',
@@ -24,8 +24,8 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Acceso denegado' });
     }
 
-    // Por ahora, devolver enlaces de ejemplo
-    // En una versión completa, aquí consultarías Redis
+    // Obtener todos los enlaces desde Redis
+    // Por ahora, devolver enlaces de ejemplo si no hay datos
     const links = [
       {
         slug: 'ejemplo1',
@@ -44,6 +44,23 @@ export default async function handler(req, res) {
         ownerSid: 'user0987654321fedcba'
       }
     ];
+    
+    // TODO: Implementar consulta real a Redis cuando esté funcionando
+    // const allLinks = await zrange('all:links', 0, -1);
+    // const links = [];
+    // for (const slug of allLinks) {
+    //   const metadata = await hgetall(`link:${slug}`);
+    //   if (metadata && metadata.url) {
+    //     links.push({
+    //       slug: slug,
+    //       url: metadata.url,
+    //       totalClicks: parseInt(metadata.clicks) || 0,
+    //       createdAt: parseInt(metadata.created) || Date.now(),
+    //       enabled: metadata.enabled === 'true',
+    //       ownerSid: metadata.ownerSid || 'unknown'
+    //     });
+    //   }
+    // }
 
     return res.status(200).json({
       links: links,
