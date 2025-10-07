@@ -25,42 +25,29 @@ export default async function handler(req, res) {
     }
 
     // Obtener todos los enlaces desde Redis
-    // Por ahora, devolver enlaces de ejemplo si no hay datos
-    const links = [
-      {
-        slug: 'ejemplo1',
-        url: 'https://www.google.com',
-        totalClicks: 15,
-        createdAt: Date.now() - 7 * 24 * 60 * 60 * 1000,
-        enabled: true,
-        ownerSid: 'user1234567890abcdef'
-      },
-      {
-        slug: 'ejemplo2',
-        url: 'https://www.github.com',
-        totalClicks: 8,
-        createdAt: Date.now() - 3 * 24 * 60 * 60 * 1000,
-        enabled: true,
-        ownerSid: 'user0987654321fedcba'
-      }
-    ];
+    const allLinks = await zrange('all:links', 0, -1);
+    const links = [];
     
-    // TODO: Implementar consulta real a Redis cuando esté funcionando
-    // const allLinks = await zrange('all:links', 0, -1);
-    // const links = [];
-    // for (const slug of allLinks) {
-    //   const metadata = await hgetall(`link:${slug}`);
-    //   if (metadata && metadata.url) {
-    //     links.push({
-    //       slug: slug,
-    //       url: metadata.url,
-    //       totalClicks: parseInt(metadata.clicks) || 0,
-    //       createdAt: parseInt(metadata.created) || Date.now(),
-    //       enabled: metadata.enabled === 'true',
-    //       ownerSid: metadata.ownerSid || 'unknown'
-    //     });
-    //   }
-    // }
+    for (const slug of allLinks) {
+      const metadata = await hgetall(`link:${slug}`);
+      if (metadata && metadata.url) {
+        links.push({
+          slug: slug,
+          url: metadata.url,
+          totalClicks: parseInt(metadata.clicks) || 0,
+          createdAt: parseInt(metadata.created) || Date.now(),
+          enabled: metadata.enabled === 'true' || metadata.enabled === true,
+          ownerSid: metadata.ownerSid || 'unknown'
+        });
+      }
+    }
+    
+    // Si no hay links, devolver array vacío
+    if (links.length === 0) {
+      console.log('No hay links creados todavía');
+    } else {
+      console.log(`Admin: ${links.length} links encontrados`);
+    }
 
     return res.status(200).json({
       links: links,

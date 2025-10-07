@@ -47,9 +47,13 @@ export default async function handler(req, res) {
       await hset(`link:${finalSlug}`, 'created', now);
       await hset(`link:${finalSlug}`, 'enabled', enabled);
       await hset(`link:${finalSlug}`, 'clicks', 0);
+      await hset(`link:${finalSlug}`, 'ownerSid', sid);
       
       // Agregar a la lista de links del usuario
       await zadd(`user:${sid}:links`, now, finalSlug);
+      
+      // Agregar a la lista global de links (para el admin)
+      await zadd(`all:links`, now, finalSlug);
       
       console.log(`URL guardada: ${finalSlug} -> ${url}`);
 
